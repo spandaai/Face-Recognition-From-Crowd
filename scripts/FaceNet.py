@@ -1,24 +1,8 @@
-'@Author: NavinKumarMNK'
-import sys 
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
-    
-from utils import utils
-import os
-import pandas as pd
-import torch
-import torch.nn as nn
 import pytorch_lightning as pl
-import torch.nn.functional as F
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
-from pytorch_lightning import LightningModule
-from PIL import Image
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+import torch.nn.functional as F
+from utils import utils
 
 facenet = {
     'resnet18': [2, 2, 2, 2],
@@ -140,14 +124,14 @@ class IRBlock(pl.LightningModule):
         return out
 
 class FaceNet(pl.LightningModule):
-    def __init__(self, model, pretrained:bool=False, im_size=112):
+    def __init__(self, model, pretrained: bool = False, im_size=112):
         self.inplanes = 64
-        block=IRBlock
+        block = IRBlock
         try:
             layers = facenet[model]
         except KeyError as e:
             print('Model {} not available'.format(model))
-        use_se=True
+        use_se = True
         self.use_se = use_se
         super(FaceNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, bias=False)
@@ -161,10 +145,13 @@ class FaceNet(pl.LightningModule):
         self.bn2 = nn.BatchNorm2d(512)
         self.dropout = nn.Dropout()
 
-        if im_size == 112:
-            self.fc = nn.Linear(25088, 512)
-        elif im_size == 64:  # 224
-            self.fc = nn.Linear(8192, 512)
+        # Compute the output size of the conv layers dynamically
+        dummy_input = torch.randn(1, 3, im_size, im_size)
+        conv_out = self._forward_conv_layers(dummy_input)
+        fc_input_size = conv_out.numel()
+
+        # Dynamically set the input size of the fully connected layer
+        self.fc = nn.Linear(fc_input_size, 512)
         self.bn3 = nn.BatchNorm1d(512)
 
         for m in self.modules():
@@ -178,9 +165,9 @@ class FaceNet(pl.LightningModule):
                 nn.init.constant_(m.bias, 0)
 
         try:
-            if(pretrained == True):
+            if pretrained:
                 path = utils.ROOT_PATH + '/weights/facenet_weights.pt'
-                self.load_state_dict(torch.load(path))        
+                self.load_state_dict(torch.load(path))
         except Exception as e:
             print(e)
 
@@ -193,15 +180,14 @@ class FaceNet(pl.LightningModule):
                 nn.BatchNorm2d(planes * block.expansion),
             )
         layers = []
-        layers.append(block(self.inplanes, planes, stride,
-                      downsample, use_se=self.use_se))
+        layers.append(block(self.inplanes, planes, stride, downsample, use_se=self.use_se))
         self.inplanes = planes
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes, use_se=self.use_se))
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def _forward_conv_layers(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.prelu(x)
@@ -211,67 +197,17 @@ class FaceNet(pl.LightningModule):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-
         x = self.bn2(x)
         x = self.dropout(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        x = self.bn3(x)
-
         return x
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.log('train_loss', loss)
-        return loss
-    
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.log('val_loss', loss)
-        return loss
-    
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        self.log('test_loss', loss)
-        return loss
-    
-    def on_train_end(self) -> None:
-        torch.save(self.state_dict(), utils.ROOT_PATH + '/weights/facenet_weights.pt')
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
-        return optimizer
-    
-    def prediction_step(self, batch, batch_idx, dataloader_idx=None):
-        x, y = batch
-        y_hat = self(x)
-        return y_hat
+    def forward(self, x):
+        x = self._forward_conv_layers(x)
+        x = x.view(x.size(0), -1)  # Flatten the conv output
+        print(f"Shape before fully connected layer: {x.shape}")
+        x = self.fc(x)
+        x = self.bn3(x)
+        return x
 
 
-if __name__ == "__main__":
-    model = FaceNet(model='resnet101', pretrained=True, im_size=64)
-    print(model)
-    
-    model.eval()
-    x = torch.randn(1, 3, 64, 64)
-    y = model(x)
-    print(y.shape)
 
-    torch.save(model.state_dict(), utils.ROOT_PATH + '/weights/facenet_weights.pt')
-    
-    
-    '''
-    scripted_model = torch.jit.script(model)
-    model.save(utils.ROOT_PATH + '/weights/facenet.cpkt')
-    model_new = torch.jit.load(utils.ROOT_PATH + '/weights/facenet.cpkt')
-    ligtning_model = pl.LightningModule.from_pretrained(model_new)
-    print(ligtning_model)
-    '''
-
-    #pl.Trainer(accelerator='gpu', devices=1, max_epochs=10).fit(model)

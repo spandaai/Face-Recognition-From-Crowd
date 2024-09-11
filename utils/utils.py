@@ -1,7 +1,8 @@
 import os
 import configparser
 
-ROOT_PATH = '/home/mnk/MegNav/Projects/Face-Recognition-from-crowd'
+#ROOT_PATH = '/home/mnk/MegNav/Projects/Face-Recognition-from-crowd'
+ROOT_PATH ='/Users/ranga/Face-Recognition-From-Crowd'
 
 
 def path2src(path, num=0):

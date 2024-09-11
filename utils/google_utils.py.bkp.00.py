@@ -16,15 +16,6 @@ def gsutil_getsize(url=""):
     return eval(s.split(" ")[0]) if len(s) else 0  # bytes
 
 
-import os
-
-# Check for local weights before attempting download
-def check_local_weights(weights_path):
-    if os.path.exists(weights_path):
-        print(f'Weights file {weights_path} found locally. Skipping download.')
-        return True
-    return False
-
 def attempt_download(file, repo="WongKinYiu/yolov7"):
     # Attempt file download if does not exist
     file = Path(str(file).strip().replace("'", "").lower())
@@ -46,7 +37,7 @@ def attempt_download(file, repo="WongKinYiu/yolov7"):
                 "yolov7-e6e.pt",
                 "yolov7-w6.pt",
             ]
-            tag = 'none'  # Skipping git tag check since it's not required if file is local
+            tag = subprocess.check_output("git tag", shell=True).decode().split()[-1]
 
         name = file.name
         if name in assets:

@@ -46,7 +46,7 @@ def attempt_download(file, repo="WongKinYiu/yolov7"):
                 "yolov7-e6e.pt",
                 "yolov7-w6.pt",
             ]
-            tag = 'none'  # Skipping git tag check since it's not required if file is local
+            tag = subprocess.check_output("git tag", shell=True).decode().split()[-1]
 
         name = file.name
         if name in assets:
