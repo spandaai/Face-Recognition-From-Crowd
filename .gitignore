@@ -1,3 +1,4 @@
+face-recognition-env/
 data
 inference
 .ipynb_checkpoints
@@ -31,3 +32,10 @@ __pycache__/
 # Ignore IDE-specific files
 .vscode/
 .idea/
+
+# Ignore large files
+*.so
+*.dylib
+*.pt
+*.h5
+*.weights
