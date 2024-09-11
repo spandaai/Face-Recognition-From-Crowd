@@ -112,6 +112,83 @@ This document summarizes the changes made in the three Python files (`process.py
 
 ---
 
+
+# Automated Weights Download and Extraction
+
+This project includes a script that automates the process of downloading, extracting, and cleaning up weight files from a Google Drive link. This is useful for setting up a project with necessary pretrained weights.
+
+## Instructions
+
+To automate the process of downloading the weights and setting up your project, follow these steps:
+
+### 1. Requirements
+
+Ensure that you have `gdown` and `unzip` installed. You can install `gdown` using the following command:
+
+```bash
+pip install gdown
+```
+
+`unzip` is a standard utility and can be installed using your system's package manager. For example, on Ubuntu/Debian:
+
+```bash
+sudo apt-get install unzip
+```
+
+### 2. Run the Shell Script
+
+You can automate the download, extraction, and cleanup process using the provided shell script. Save the script as `download_weights.sh` and ensure it is executable by running:
+
+```bash
+chmod +x download_weights.sh
+```
+
+Then, run the script:
+
+```bash
+./download_weights.sh
+```
+
+### 3. Dockerfile Instructions
+
+If you prefer to include the process in a `Dockerfile`, add the following lines to your `Dockerfile`:
+
+```dockerfile
+# Set working directory
+WORKDIR /app/weights
+
+# Download weights.zip using gdown and extract it
+RUN apt-get update && apt-get install -y unzip \
+    && gdown 'https://drive.google.com/u/0/uc?id=1qcgXiaAgdvSmvU3St9cJsguK6067KcjM&export=download' -O weights.zip \
+    && unzip weights.zip \
+    && rm weights.zip
+```
+
+### 4. Shell Script
+
+Here’s the shell script that you can use to automate the process:
+
+```bash
+#!/bin/bash
+
+# Set working directory
+cd /app/weights
+
+# Download the weights.zip using gdown
+gdown 'https://drive.google.com/u/0/uc?id=1qcgXiaAgdvSmvU3St9cJsguK6067KcjM&export=download' -O weights.zip
+
+# Unzip the file
+unzip weights.zip
+
+# Remove the zip file after extraction
+rm weights.zip
+
+echo "Download and extraction completed."
+```
+
+Now, you're all set to automate the weights download process for your project!
+
+
 ## How to Run the Code:
 
 1. Ensure that you have the required dependencies by installing them from `requirements.txt`:
@@ -120,4 +197,5 @@ This document summarizes the changes made in the three Python files (`process.py
    pip install -r requirements.txt
 
 python3 run.py
+
 
