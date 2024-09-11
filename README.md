@@ -47,22 +47,77 @@ Where `<source>` can be either "live" for live-stream, a path to a video file or
 For example, if you want to run the model on a live-stream, use the following command:
 
 
-## Docker Support
-To run the model using Docker, use the following command:
+# Summary of Changes
 
-```
-sudo docker build -t <image_name> .
-sudo docker run --gpus all -it <image_name>
-```
+This document summarizes the changes made in the three Python files (`process.py`, `FaceRecognition.py`, and `FaceNet.py`).
 
-Where `<image_name>` is the name of the image you want to build and `<path_to_project>` is the path to the project directory.
+## 1. `process.py`
 
-    Note: Run docker as super user to avoid libnividai.so.1 not found error.
-    --device /dev/video0 => for live stream
+### Modified Device Type Checks:
+- Updated the code to ensure proper handling of device types (CPU/GPU). Specifically, replaced the line that incorrectly checked `self.device.type` with an explicit condition using `torch.device()`.
 
-## Building
-> To run the model using Tensor RT, use the following command:
-> Multiple Camera channel, with centralized server
-> Decoupling Camera and Server
-> Distributed Inference
+### Adjusted Model Loading:
+- Added proper error handling around the `attempt_load()` function when loading the YOLOv7-tinyface model weights to avoid runtime errors during the model initialization process.
+
+### Debugging and Error Messages:
+- Added print statements to track the flow of execution and ensure that the model and camera were loading properly.
+
+### Fixed Issues with the Video Stream:
+- Addressed issues where OpenCV could not access the camera feed due to improper initialization of the stream. This was done by reworking the stream handling code.
+
+---
+
+## 2. `FaceRecognition.py`
+
+### Fixed Model Initialization:
+- Corrected an issue where `self.upsample` was being called outside the `__init__` method, causing `NameError`. Moved the `self.upsample` instantiation inside the constructor.
+
+### Modified Input Handling:
+- Added error handling in the `predict` method to ensure proper handling of image inputs, including resizing the images to the correct dimensions expected by the model.
+
+### Error Messages and Debugging:
+- Inserted debug print statements to show the image shape before and after the prediction. This helped identify where the model input/output shapes were causing issues.
+
+### Fixed Tensor Shape Mismatches:
+- Resolved issues in the prediction method related to the shape of the tensors passed to the fully connected layers by ensuring the proper flattening of the tensors before passing them into the model.
+
+---
+
+## 3. `FaceNet.py`
+
+### Improved Model Architecture:
+- Adjusted the fully connected layer dimensions in the `FaceNet` class to ensure compatibility with the input tensor sizes. Specifically, the input to the `fc` layer was updated to handle different image sizes by adding print statements to track the shape before the fully connected layers.
+
+### Pretrained Model Handling:
+- Ensured that the model is loaded with pre-trained weights correctly. Added a path check to ensure the pretrained weights file exists and is loaded during initialization.
+
+### Error Handling:
+- Added exception handling around the `torch.load()` function to catch and report any file loading issues with the pretrained model.
+
+### Batch Normalization and Xavier Initialization:
+- Added proper weight initialization for the convolutional and linear layers using Xavier initialization, and ensured that the batch normalization layers are correctly initialized for stability.
+
+---
+
+## Changes Made in All Files:
+
+### Device Handling (CPU/GPU):
+- Standardized the device handling to ensure compatibility with either CPU or GPU using `torch.device("cuda" if torch.cuda.is_available() else "cpu")` across all the files.
+
+### Code Refactoring:
+- Refactored several parts of the code to follow Python best practices, such as moving variable definitions inside constructors, ensuring proper method scoping, and improving readability by adding comments.
+
+### Debugging Enhancements:
+- Added multiple debug print statements throughout the files to trace tensor shapes, intermediate results, and to catch potential shape mismatches in tensors passed between layers of the model.
+
+---
+
+## How to Run the Code:
+
+1. Ensure that you have the required dependencies by installing them from `requirements.txt`:
+
+   ```bash
+   pip install -r requirements.txt
+
+python3 run.py
 
