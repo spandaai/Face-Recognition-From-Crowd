@@ -11,3 +11,23 @@ temp
 faces
 traced_model.pt
 lightning_logs
+
+# Ignore virtual environment
+venv/
+face-recognition-env/
+
+# Ignore other large or unnecessary files
+*.log
+*.pyc
+__pycache__/
+.DS_Store
+
+# Ignore large datasets, weights, or model files
+*.pt
+*.h5
+*.model
+*.weights
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
